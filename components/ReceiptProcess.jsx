@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  LayoutAnimation,
 } from "react-native";
 import React, { useState } from "react";
 import ReceiptFull from "./ReceiptFull";
@@ -18,12 +19,23 @@ const ReceiptProcess = ({ imageUri, onCancel }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+  };
+  const [showAllItems, setShowAllItems] = useState(false);
+
+  const toggleItems = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAllItems((prev) => !prev);
+  };
   const handleProcessReceipt = async () => {
     try {
       setIsProcessing(true);
       const data = await extractReceiptData(imageUri);
       setExtractedData(data);
+
       Alert.alert("Success", "Receipt processed successfully!");
     } catch (error) {
       Alert.alert("Error", "Failed to extract receipt data.");
@@ -46,17 +58,30 @@ const ReceiptProcess = ({ imageUri, onCancel }) => {
   };
 
   return (
-    <View className="bg-onboarding/40 rounded-xl px-6 pt-2 pb-1 border-2 border-[#b94040]  max-h-[80vh] ">
+    <View className="bg-onboarding/40 rounded-3xl px-2 pt-2 pb-1   max-h-[90vh] border-b-2 border-t-2 border-[#b94040]">
       <ScrollView
-        contentContainerStyle={{ alignItems: "center", paddingBottom: 1 ,flexGrow:1 }}
+        contentContainerStyle={{
+          alignItems: "center",
+          paddingBottom: 1,
+          flexGrow: 1,
+        }}
         showsVerticalScrollIndicator={true}
         // style={{ borderColor: 'red', borderWidth: 1 }}
       >
-        <Text className="text-xl text-blue-900 font-pbold text-center mb-2">
-          {!extractedData
-            ? "Receipt Processing..."
-            : "🎉 Receipt Extracted Successfuly"}
-        </Text>
+        {extractedData && (
+          <>
+            <Image
+              source={images.success}
+              className="  w-16 h-16  right-1"
+              resizeMode="contain"
+            />
+            <Text className="text-xl text-blue-900 font-pbold text-center mb-2">
+              {!extractedData
+                ? "Receipt Processing..."
+                : "🎉 Receipt Extracted Successfuly"}
+            </Text>
+          </>
+        )}
 
         {!extractedData && (
           <TouchableOpacity
@@ -119,82 +144,114 @@ const ReceiptProcess = ({ imageUri, onCancel }) => {
 
         {extractedData && (
           <>
-            <View className="w-full  mt-2 px-6 py-2 bg-slate-200  rounded-xl border-2 border-[#b94040]  mb-2">
-              <Text className="font-psemibold text-lg mb-4 text-secondary text-center">
+            <View className="w-full  mt-1 px-8 py-1 bg-slate-200  rounded-xl border-2 border-[#b94040]  mb-2">
+              <Text className="font-plight text-lg mb-4 text-red-900 text-center underline">
                 Receipt Details
               </Text>
-              {extractedData && (
-                <Image
-                  source={images.success}
-                  className=" absolute w-16 h-16  right-1"
-                  resizeMode="contain"
-                />
-              )}
 
-              {extractedData.merchant && (
-                <Text className="text-blue-900 font-psemibold mb-3">
+              {extractedData.merchant && !showAllItems && (
+                <Text className="text-blue-900 font-psemibold mb-3 text-base">
                   <Text className="text-black font-semibold text-base ">
-                    🏪 Merchant:
+                    🏪 Merchant →
                   </Text>{" "}
                   {extractedData.merchant}
                 </Text>
               )}
-              {extractedData.location && (
-                <Text className="text-blue-900 font-psemibold mb-3">
+
+              {extractedData.location && !showAllItems && (
+                <Text className="text-blue-900 font-psemibold mb-3 text-base">
                   <Text className="text-black font-pbold text-base">
-                    📍 Location:
+                    📍 Location →
                   </Text>{" "}
                   {extractedData.location}
                 </Text>
               )}
-              {extractedData.datetime && (
-                <Text className="text-blue-900 font-psemibold mb-3">
+
+              {extractedData.datetime && !showAllItems && (
+                <Text className="text-blue-900 font-psemibold mb-3 text-base">
                   <Text className="text-black font-pbold text-base">
-                    📅 Date:
+                    📅 Date →
                   </Text>{" "}
                   {extractedData.datetime}
                 </Text>
               )}
-              {extractedData.items?.length > 0 && (
-                <View className="mb-3">
-                  <Text className="font-pbold text-base text-black mb-1">
-                    🛒 Items:
+
+              {extractedData.items.length > 0 && !showAllItems && (
+                <View>
+                  <Text className="font-pbold text-base text-black mb-1 ">
+                    🗂️ Category:
                   </Text>
-                  {extractedData.items.map((item, index) => (
-                    <>
-                      <Text
-                        key={index}
-                        className="text-black/70 font-psemibold ml-4 mb-2 text-blue-900"
-                      >
-                        • {item.name || "Unnamed item"}{" "}
-                        <Text className="text-black/70 font-bold text-secondary text-base">
-                          {item.price || "N/A"}
-                        </Text>
-                      </Text>
-                    </>
-                  ))}
+                  <Text className="text-base text-green-900 ml-4 mb-2 font-psemibold">
+                    {extractedData.items[0].category || "Unknown"} →{" "}
+                    {extractedData.items[0].subcategory || "Uncategorized"}
+                  </Text>
                 </View>
               )}
 
-              {extractedData.subtotal && (
-                <Text className="text-secondary text-base font-psemibold mb-3">
+              {/* Items extracted as collapssed */}
+
+              {extractedData.items?.length > 0 && (
+                <View className="mb-3">
+                  {/* Always show the "Items" label */}
+                  <View className="flex-row items-center mb-1">
+                    <Text className="font-pbold text-base text-blue-700">
+                      🛒 Items:
+                    </Text>
+                    {extractedData.items.length > 3 && (
+                      <TouchableOpacity onPress={toggleItems}>
+                        <Text className="font-pbold text-base text-blue-700 ml-1">
+                          {showAllItems ? "(▲ Show less)" : "(Show more ▼)"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {(showAllItems || extractedData.items.length <= 2
+                    ? extractedData.items
+                    : extractedData.items.slice(0, 2)
+                  ).map((item, index) => (
+                    <View key={index} className="ml-4 mb-1 p-1   ">
+                      <Text className="text-blue-900 font-psemibold text-base">
+                        • {item.name || "Unnamed item"} →{" "}
+                        <Text className="font-bold text-red-900 text-base">
+                          {item.price || "N/A"}
+                        </Text>
+                      </Text>
+                    </View>
+                  ))}
+
+                  {/* Show toggle only if more than 3 items */}
+                  {extractedData.items.length > 3 && (
+                    <TouchableOpacity onPress={toggleItems}>
+                      <Text className="text-blue-700 font-pbold ml-4 mt-1 text-base">
+                        {showAllItems
+                          ? "▲ Hide Items & Show Details"
+                          : "▼ Show All Items"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {extractedData.subtotal && !showAllItems && (
+                <Text className="text-red-900  text-base font-psemibold mb-1">
                   <Text className="text-black font-pbold text-base">
-                    💵 Subtotal:
+                    💵 Subtotal →
                   </Text>{" "}
                   {extractedData.subtotal}
                 </Text>
               )}
-              {extractedData.vat && (
-                <Text className="text-secondary text-base font-psemibold mb-3">
+              {extractedData.vat && !showAllItems && (
+                <Text className="text-red-900  text-base font-psemibold mb-1">
                   <Text className="text-black font-pbold text-base">
-                    🧾 VAT:
+                    🧾 VAT →
                   </Text>{" "}
                   {extractedData.vat}
                 </Text>
               )}
             </View>
             {extractedData.total && (
-              <Text className="text-blue-900 font-psemibold mb-3 text-xl">
+              <Text className="text-blue-900 font-psemibold mb-1 text-xl">
                 <Text className="text-black font-pbold text-xl">💰 Total:</Text>{" "}
                 {extractedData.total}
               </Text>
@@ -232,7 +289,7 @@ const ReceiptProcess = ({ imageUri, onCancel }) => {
                   <Image
                     source={images.confirm}
                     resizeMode="contain"
-                    className={`w-[55px] h-[55px] rounded-full p-1 border-2 ${
+                    className={`w-[58px] h-[58px] rounded-full p-1 border-2 ${
                       consentGiven ? "border-green-500" : "border-gray-300"
                     }`}
                   />
